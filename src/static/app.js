@@ -47,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="participants-section" aria-live="polite">
           <strong>Teilnehmende:</strong>
           <ul class="participants-list">
-            ${a.participants.map(p => `<li>${escapeHtml(p)}</li>`).join('')}
+            ${a.participants.map(p => `<li><span class="participant-email">${escapeHtml(p)}</span><button class="participant-remove" data-activity="${escapeHtml(name)}" data-email="${escapeHtml(p)}" title="Entfernen">✕</button></li>`).join('')}
           </ul>
         </div>
       `;
@@ -90,13 +90,56 @@ document.addEventListener('DOMContentLoaded', () => {
       if (matched) {
         const a = updated[activity];
         const plist = matched.querySelector('.participants-list');
-        if (plist) plist.innerHTML = a.participants.map(p => `<li>${escapeHtml(p)}</li>`).join('');
+        if (plist) plist.innerHTML = a.participants.map(p => `<li><span class="participant-email">${escapeHtml(p)}</span><button class="participant-remove" data-activity="${escapeHtml(activity)}" data-email="${escapeHtml(p)}" title="Entfernen">✕</button></li>`).join('');
         const spots = matched.querySelector('.spots');
         if (spots) spots.textContent = `${a.participants.length}/${a.max_participants}`;
       }
       form.reset();
     } catch (err) {
       showMessage(err.message || 'Fehler beim Anmelden.', 'error');
+      console.error(err);
+    }
+  });
+
+  // Delegated click handler for remove buttons
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.participant-remove');
+    if (!btn) return;
+
+    const activity = btn.dataset.activity;
+    const email = btn.dataset.email;
+    if (!activity || !email) return;
+
+    if (!confirm(`Teilnehmer ${email} von "${activity}" entfernen?`)) return;
+
+    try {
+      const res = await fetch(`/activities/${encodeURIComponent(activity)}/participants?email=${encodeURIComponent(email)}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || data.message || 'Fehler beim Entfernen');
+
+      showMessage(data.message || 'Teilnehmer entfernt', 'success');
+
+      // Update UI: remove the li and adjust spots
+      const btns = Array.from(document.querySelectorAll('.participant-remove'));
+      // Find the matching button(s) in DOM and remove parent li
+      btn.parentElement?.remove();
+
+      // Update spots display for the affected activity card
+      const card = Array.from(document.querySelectorAll('.activity-card')).find(c => c.querySelector('h4') && c.querySelector('h4').textContent === activity);
+      if (card) {
+        // fetch latest activity data to keep in sync
+        const updatedRes = await fetch('/activities');
+        const updated = await updatedRes.json();
+        const a = updated[activity];
+        const spots = card.querySelector('.spots');
+        const plist = card.querySelector('.participants-list');
+        if (spots && a) spots.textContent = `${a.participants.length}/${a.max_participants}`;
+        if (plist && a) plist.innerHTML = a.participants.map(p => `<li><span class="participant-email">${escapeHtml(p)}</span><button class="participant-remove" data-activity="${escapeHtml(activity)}" data-email="${escapeHtml(p)}" title="Entfernen">✕</button></li>`).join('');
+      }
+    } catch (err) {
+      showMessage(err.message || 'Fehler beim Entfernen', 'error');
       console.error(err);
     }
   });

@@ -176,6 +176,25 @@ footer {
   color: #333;
   font-size: 14px;
   transition: background-color 0.12s ease;
+  position: relative;
+}
+
+.participant-remove {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: #c62828;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: background-color 0.12s;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.participant-remove:hover {
+  background-color: rgba(198,40,40,0.08);
 }
 
 /* small avatar dot */
